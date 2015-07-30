@@ -17,7 +17,7 @@
 #
 # Thomas Quintana <quintana.thomas@gmail.com>
 
-from lib.fsm import *
+from freepy.lib.fsm import *
 from unittest import TestCase, expectedFailure
 
 class AbstractLightBulb(FiniteStateMachine):

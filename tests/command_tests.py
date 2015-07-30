@@ -19,7 +19,7 @@
 #
 # Cristian Groza <frontc18@gmail.com>
 
-from lib.commands import *
+from freepy.lib.commands import *
 from unittest import TestCase, expectedFailure
 
 class BackgroundCommandTests(TestCase):

@@ -19,10 +19,10 @@
 #
 # Thomas Quintana <quintana.thomas@gmail.com>
 
-from lib.commands import *
-from lib.core import *
-from lib.fsm import *
-from lib.server import Event, RegisterJobObserverCommand, UnregisterJobObserverCommand
+from freepy.lib.commands import *
+from freepy.lib.core import *
+from freepy.lib.fsm import *
+from freepy.lib.server import Event, RegisterJobObserverCommand, UnregisterJobObserverCommand
 
 import logging
 import urllib

@@ -17,8 +17,8 @@
 #
 # Thomas Quintana <quintana.thomas@gmail.com>
 
-from lib.core import *
-from lib.services import *
+from freepy.lib.core import *
+from freepy.lib.services import *
 from pykka import ActorRegistry
 from unittest import TestCase
 
