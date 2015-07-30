@@ -17,18 +17,20 @@
 #
 # Thomas Quintana <quintana.thomas@gmail.com>
 
-from conf.settings import *
-from lib.commands import *
-from lib.core import *
-from lib.esl import *
-from lib.fsm import *
-from lib.services import *
+from freepy.lib.commands import *
+from freepy.lib.core import *
+from freepy.lib.esl import *
+from freepy.lib.fsm import *
+from freepy.lib.services import *
 from pykka import ActorRegistry, ThreadingActor
 from twisted.internet import reactor
+from twisted.application import service
+from twisted.application.internet import TCPClient
 
 import logging
 import re
 import sys
+import signal
 
 # Commands used only by the Freepy server.
 class AuthCommand(object):
@@ -205,6 +207,11 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
 
   def __init__(self, *args, **kwargs):
     super(Dispatcher, self).__init__(*args, **kwargs)
+    if 'event_list' not in kwargs:
+      raise Exception('must provide an \'event_list\' to subscribe to')
+    self.__dispatch_events__ = kwargs.get('event_list')
+    self.__dispatch_rules__ = kwargs.get('dispatch_rules', [])
+    self.__freeswitch_host__ = kwargs.get('freeswitch_host')
     self.__logger__ = logging.getLogger('freepy.lib.server.dispatcher')
     self.__observers__ = dict()
     self.__transactions__ = dict()
@@ -212,7 +219,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
 
   @Action(state = 'authenticating')
   def __authenticate__(self, message):
-    password = freeswitch_host.get('password')
+    password = self.__freeswitch_host__.get('password')
     auth_command = AuthCommand(password)
     self.__client__.send(auth_command)
 
@@ -268,7 +275,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
   def __dispatch_incoming_using_dispatch_rules__(self, message):
     headers = message.get_headers()
     # Dispatch based on the pre-defined dispatch rules.
-    for rule in dispatch_rules:
+    for rule in self.__dispatch_rules__:
       target = rule.get('target')
       name = rule.get('header_name')
       header = headers.get(name)
@@ -336,11 +343,11 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
 
   @Action(state = 'initializing')
   def __initialize__(self, message):
-    if 'BACKGROUND_JOB' not in dispatch_events:
+    if 'BACKGROUND_JOB' not in self.__dispatch_events__:
       # The BACKGROUND_JOB events must be added at the front of the
       # list in case the list ends with CUSTOM events.
-      dispatch_events.insert(0, 'BACKGROUND_JOB')
-    events_command = EventsCommand(dispatch_events)
+      self.__dispatch_events__.insert(0, 'BACKGROUND_JOB')
+    events_command = EventsCommand(self.__dispatch_events__)
     self.__client__.send(events_command)
 
   def __on_auth__(self, message):
@@ -441,19 +448,58 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
     elif isinstance(message, WatchEventCommand):
       self.__on_watch__(message)
 
-class FreepyServer(object):
-  def __generate_event_lookup_table__(self):
+class FreepyService(service.Service):
+  def __init__(self, logging_config, freeswitch_host,
+               event_list, services, rules=[]):
+    # Initialize application wide logging.
+    logging.basicConfig(**logging_config)
+    self.__logger__ = logging.getLogger('freepy.lib.server.FreepyService')
+    # Validate the list of rules.
+    for rule in rules:
+      if not self.__validate_rule__(rule):
+        self.__logger__.critical('The rule %s is invalid.', str(rule))
+        raise Exception('The rule {} is invalid.'.format(str(rule)))
+    # Create a dispatcher thread.
+    dispatcher = Dispatcher.start(
+      event_list=event_list, dispatch_rules=rules,
+      freeswitch_host=freeswitch_host)
+    # Load all the apps.
+    factory = self.__load_apps_factory__(rules, dispatcher)
+    # Load the dispatcher services.
+    for service in services:
+      factory.register(service.get('target'), type = 'singleton')
+    # Generate an event lookup table.
+    events = self.__generate_event_lookup_table__(services)
+    # Create the proxy between the event socket client and the dispatcher.
+    self.__dispatcher_proxy__ = DispatcherProxy(factory, dispatcher, events)
+    # Create an event socket client factory and start the reactor.
+    self.__freeswitch_host__ = freeswitch_host
+
+  def startService(self):
+    address = self.__freeswitch_host__.get('address')
+    port = self.__freeswitch_host__.get('port')
+    factory = EventSocketClientFactory(self.__dispatcher_proxy__)
+    # return TCPClient(address, port, factory)
+    reactor.connectTCP(address, port, factory)
+    reactor.run()
+    # point = TCP4ClientEndpoint(reactor, address, port)
+    # point.connect(factory) 
+    # self.__esl_endpoint__ = point
+
+  def stopService(self):
+    # self.__esl_endpoint__.disconnect()
+    # reactor.stop()
+    ActorRegistry.stop_all()
+
+  def __generate_event_lookup_table__(self, services):
     lookup_table = dict()
-    for service in dispatcher_services:
+    for service in services:
       events = service.get('events')
       for event in events:
         lookup_table.update({ event: service.get('target') })
     return lookup_table
 
-  def __init__(self, *args, **kwargs):
-    self.__logger__ = logging.getLogger('freepy.lib.server.freepyserver')
-
-  def __load_apps_factory__(self, dispatcher):
+  def __load_apps_factory__(self, dispatch_rules, dispatcher):
     factory = ApplicationFactory(dispatcher)
     for rule in dispatch_rules:
       target = rule.get('target')
@@ -463,10 +509,6 @@ class FreepyServer(object):
       else:
         factory.register(target, type = 'singleton')
     return factory
-
-  def __load_services__(self, factory):
-    for service in dispatcher_services:
-      factory.register(service.get('target'), type = 'singleton')
 
   def __validate_rule__(self, rule):
     name = rule.get('header_name')
@@ -478,33 +520,3 @@ class FreepyServer(object):
       return False
     else:
       return True
-
-  def start(self):
-    # Initialize application wide logging.
-    logging.basicConfig(filename = logging_filename, format = logging_format,
-      level = logging_level)
-    # Validate the list of rules.
-    for rule in dispatch_rules:
-      if not self.__validate_rule__(rule):
-        self.__logger__.critical('The rule %s is invalid.', str(rule))
-        return
-    # Create a dispatcher thread.
-    dispatcher = Dispatcher().start()
-    # Load all the apps.
-    apps = self.__load_apps_factory__(dispatcher)
-    # Load the dispatcher services.
-    self.__load_services__(apps)
-    # Generate an event lookup table.
-    events = self.__generate_event_lookup_table__()
-    # Create the proxy between the event socket client and the dispatcher.
-    dispatcher_proxy = DispatcherProxy(apps, dispatcher, events)
-    # Create an event socket client factory and start the reactor.
-    address = freeswitch_host.get('address')
-    port = freeswitch_host.get('port')
-    factory = EventSocketClientFactory(dispatcher_proxy)
-    reactor.connectTCP(address, port, factory)
-    reactor.run()
-
-  def stop(self):
-    ActorRegistry.stop_all()
-  
