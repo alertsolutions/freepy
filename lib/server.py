@@ -30,7 +30,6 @@ from twisted.application.internet import TCPClient
 import logging
 import re
 import sys
-import signal
 
 # Commands used only by the Freepy server.
 class AuthCommand(object):
@@ -448,48 +447,33 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
     elif isinstance(message, WatchEventCommand):
       self.__on_watch__(message)
 
-class FreepyService(service.Service):
+
+class FreepyClient(TCPClient):
+  def __init__(self, overlord, freeswitch):
+    TCPClient.__init__(self,
+                       freeswitch['address'],
+                       freeswitch['port'],
+                       overlord.factory)
+
+
+class FreepyOverlord(object):
   def __init__(self, logging_config, freeswitch_host,
                event_list, services, rules=[]):
-    # Initialize application wide logging.
     logging.basicConfig(**logging_config)
-    self.__logger__ = logging.getLogger('freepy.lib.server.FreepyService')
-    # Validate the list of rules.
+    self.__logger__ = logging.getLogger('freepy.lib.server.FreepyOverlord')
     for rule in rules:
       if not self.__validate_rule__(rule):
         self.__logger__.critical('The rule %s is invalid.', str(rule))
         raise Exception('The rule {} is invalid.'.format(str(rule)))
-    # Create a dispatcher thread.
     dispatcher = Dispatcher.start(
       event_list=event_list, dispatch_rules=rules,
       freeswitch_host=freeswitch_host)
-    # Load all the apps.
-    factory = self.__load_apps_factory__(rules, dispatcher)
-    # Load the dispatcher services.
+    app_factory = self.__load_apps_factory__(rules, dispatcher)
     for service in services:
-      factory.register(service.get('target'), type = 'singleton')
-    # Generate an event lookup table.
+      app_factory.register(service.get('target'), type = 'singleton')
     events = self.__generate_event_lookup_table__(services)
-    # Create the proxy between the event socket client and the dispatcher.
-    self.__dispatcher_proxy__ = DispatcherProxy(factory, dispatcher, events)
-    # Create an event socket client factory and start the reactor.
-    self.__freeswitch_host__ = freeswitch_host
-
-  def startService(self):
-    address = self.__freeswitch_host__.get('address')
-    port = self.__freeswitch_host__.get('port')
-    factory = EventSocketClientFactory(self.__dispatcher_proxy__)
-    # return TCPClient(address, port, factory)
-    reactor.connectTCP(address, port, factory)
-    reactor.run()
-    # point = TCP4ClientEndpoint(reactor, address, port)
-    # point.connect(factory) 
-    # self.__esl_endpoint__ = point
-
-  def stopService(self):
-    # self.__esl_endpoint__.disconnect()
-    # reactor.stop()
-    ActorRegistry.stop_all()
+    self.factory = EventSocketClientFactory(
+        DispatcherProxy(app_factory, dispatcher, events))
 
   def __generate_event_lookup_table__(self, services):
     lookup_table = dict()
