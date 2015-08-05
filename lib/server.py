@@ -191,6 +191,9 @@ class DispatcherProxy(IEventSocketClientObserver):
     event = KillDispatcherEvent()
     self.__dispatcher__.tell({'content': event})
 
+class DispatcherDispatching(ServiceRequest):
+  pass
+
 class Dispatcher(FiniteStateMachine, ThreadingActor):
   initial_state = 'not ready'
 
@@ -338,7 +341,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
     target = self.__events__.get(name)
     if target:
       service = self.__apps__.get_instance(target)
-      service.tell({ 'content': message })
+      service.tell({'content': message})
 
   @Action(state = 'initializing')
   def __initialize__(self, message):
@@ -366,6 +369,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
         self.transition(to = 'failed authentication', event = message)
     if self.state() == 'initializing':
       if reply == '+OK event listener enabled plain':
+        self.actor_ref.tell({'content': DispatcherDispatching()})
         self.transition(to = 'dispatching')
       elif reply == '-ERR no keywords supplied':
         self.transition(to = 'failed initialization', event = message)
@@ -470,7 +474,7 @@ class FreepyOverlord(object):
       freeswitch_host=freeswitch_host)
     app_factory = self.__load_apps_factory__(rules, dispatcher)
     for service in services:
-      app_factory.register(service.get('target'), type = 'singleton')
+      app_factory.register(service.get('target'), type='singleton')
     events = self.__generate_event_lookup_table__(services)
     self.factory = EventSocketClientFactory(
         DispatcherProxy(app_factory, dispatcher, events))
