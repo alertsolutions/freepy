@@ -115,10 +115,10 @@ class WatchEventCommand(UnwatchEventCommand):
 
 # The Core server components.
 class ApplicationFactory(object):
-  def __init__(self, dispatcher):
+  def __init__(self, dispatcher, app_config):
     self.__classes__ = dict()
     self.__singletons__ = dict()
-    self.__init_event__ = InitializeSwitchletEvent(dispatcher)
+    self.__init_event__ = InitializeSwitchletEvent(dispatcher, app_config)
     self.__uninit_event__ = UninitializeSwitchletEvent()
 
   def __contains_name__(self, name):
@@ -462,7 +462,7 @@ class FreepyClient(TCPClient):
 
 class FreepyOverlord(object):
   def __init__(self, logging_config, freeswitch_host,
-               event_list, services, rules=[]):
+               event_list, services, rules=[], app_config=None):
     logging.basicConfig(**logging_config)
     self.__logger__ = logging.getLogger('freepy.lib.server.FreepyOverlord')
     for rule in rules:
@@ -472,7 +472,7 @@ class FreepyOverlord(object):
     dispatcher = Dispatcher.start(
       event_list=event_list, dispatch_rules=rules,
       freeswitch_host=freeswitch_host)
-    app_factory = self.__load_apps_factory__(rules, dispatcher)
+    app_factory = self.__load_apps_factory__(rules, dispatcher, app_config)
     for service in services:
       app_factory.register(service.get('target'), type='singleton')
     events = self.__generate_event_lookup_table__(services)
@@ -487,15 +487,15 @@ class FreepyOverlord(object):
         lookup_table.update({ event: service.get('target') })
     return lookup_table
 
-  def __load_apps_factory__(self, dispatch_rules, dispatcher):
-    factory = ApplicationFactory(dispatcher)
+  def __load_apps_factory__(self, dispatch_rules, dispatcher, app_config):
+    factory = ApplicationFactory(dispatcher, app_config)
     for rule in dispatch_rules:
       target = rule.get('target')
       persistent = rule.get('persistent')
-      if not persistent:
-        factory.register(target, type = 'class')
+      if persistent:
+        factory.register(target, type='singleton')
       else:
-        factory.register(target, type = 'singleton')
+        factory.register(target, type='class')
     return factory
 
   def __validate_rule__(self, rule):

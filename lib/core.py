@@ -20,11 +20,17 @@
 from pykka import ThreadingActor
 
 class InitializeSwitchletEvent(object):
-  def __init__(self, dispatcher):
+  def __init__(self, dispatcher, app_config=None):
     self.__dispatcher__ = dispatcher
+    self.__app_config__ = app_config
 
-  def get_dispatcher(self):
+  @property
+  def dispatcher(self):
     return self.__dispatcher__
+
+  @property
+  def app_config(self):
+    return self.__app_config__
 
 class UninitializeSwitchletEvent(object):
   pass
