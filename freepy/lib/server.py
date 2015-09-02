@@ -461,9 +461,8 @@ class FreepyClient(TCPClient):
 
 
 class FreepyOverlord(object):
-  def __init__(self, logging_config, freeswitch_host,
-               event_list, services, rules=[], app_config=None):
-    logging.basicConfig(**logging_config)
+  def __init__(self, freeswitch_host, event_list,
+               services, rules=[], app_config=None):
     self.__logger__ = logging.getLogger('freepy.lib.server.FreepyOverlord')
     for rule in rules:
       if not self.__validate_rule__(rule):
