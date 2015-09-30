@@ -420,6 +420,9 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
     self.__logger__.error(exception_value)
 
   def on_receive(self, message):
+    size = self.actor_inbox.qsize()
+    if size > 0 and size % 5 == 0:
+      self.__logger__.info('%d messages need processing', size)
     # This is necessary because all Pykka messages
     # must be of type dict.
     message = message.get('content')
