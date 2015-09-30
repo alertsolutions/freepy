@@ -953,20 +953,29 @@ class OriginateCommand(BackgroundCommand):
       raise RuntimeError('An originate command can specify either an \
       extension or an app_name but not both.')
 
-  def get_app_name(self):
+  @property
+  def app_name(self):
     return self.__app_name__
 
-  def get_app_args(self):
+  @property
+  def app_args(self):
     return self.__app_args__
 
-  def get_extension(self):
+  @property
+  def extension(self):
     return self.__extension__
 
-  def get_options(self):
+  @property
+  def options(self):
     return self.__options__
 
-  def get_url(self):
+  @property
+  def url(self):
     return self.__url__
+
+  @url.setter
+  def url(self, value):
+    self.__url__ = value
 
   def __str__(self):
     buffer = StringIO()
