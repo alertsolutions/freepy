@@ -325,7 +325,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
     recipient = self.__observers__.get(uuid)
     if recipient:
       if recipient.is_alive():
-        recipient.tell({'content': message})
+        recipient.tell({'content': message}, True)
       else:
         del self.__observers__[uuid]
 
