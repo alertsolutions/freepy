@@ -2,10 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='freepy',
-    version='0.9.9',
+    version='0.10.0',
     packages=find_packages(),
+    dependency_links=[
+        'https://github.com/alertsolutions/pykka/tarball/master#egg=pykka-1.3.0',
+    ],
     install_requires=[
-        'pykka>=1.2.0',
+        'pykka==1.3.0',
         'llist==0.4',
         'twisted>=13.2.0'
     ],
