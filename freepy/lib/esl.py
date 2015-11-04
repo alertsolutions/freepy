@@ -17,7 +17,7 @@
 #
 # Thomas Quintana <quintana.thomas@gmail.com>
 from os import SEEK_END
-from twisted.internet.protocol import Protocol, ReconnectingClientFactory
+from twisted.internet.protocol import Protocol, ClientFactory
 
 # Import the proper StringIO implementation.
 try:
@@ -186,7 +186,8 @@ class EventSocketClient(Protocol):
         self.__peer__.host, self.__peer__.port, serialized_command)
     self.transport.write(serialized_command)
 
-class EventSocketClientFactory(ReconnectingClientFactory):
+# class EventSocketClientFactory(ReconnectingClientFactory):
+class EventSocketClientFactory(ClientFactory):
   def __init__(self, observer):
     self.__logger__ = logging.getLogger('freepy.lib.esl.eventsocketclientfactory')
     self.__observer__ = observer
@@ -195,5 +196,5 @@ class EventSocketClientFactory(ReconnectingClientFactory):
     if self.__logger__.isEnabledFor(logging.INFO):
       self.__logger__.info('Connected to the FreeSWITCH instance located @ %s:%i.',
         addr.host, addr.port)
-    self.resetDelay()
+    # self.resetDelay()
     return EventSocketClient(self.__observer__)
