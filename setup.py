@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='freepy',
-    version='0.10.0',
+    version='0.10.1',
     packages=find_packages(),
     dependency_links=[
         'https://github.com/alertsolutions/pykka/tarball/master#egg=pykka-1.3.0',
