@@ -44,14 +44,14 @@ class TestApplicationFactoryActor(ThreadingActor):
     pass
 
 class ApplicationFactoryTests(TestCase):
-  __test_actor_path__ = 'tests.server_tests.TestApplicationFactoryActor'
+  __test_actor_path__ = 'freepy.tests.server_tests.TestApplicationFactoryActor'
 
   @classmethod
   def tearDownClass(cls):
     ActorRegistry.stop_all()
 
   def test_class_instantiation(self):
-    self.__factory__ = ApplicationFactory(object())
+    self.__factory__ = ApplicationFactory(object(), object())
     self.__factory__.register(self.__test_actor_path__)
     instance_a = self.__factory__.get_instance(self.__test_actor_path__)
     instance_b = self.__factory__.get_instance(self.__test_actor_path__)
@@ -59,7 +59,7 @@ class ApplicationFactoryTests(TestCase):
     self.__factory__.shutdown()
 
   def test_singleton_instantiation(self):
-    self.__factory__ = ApplicationFactory(object())
+    self.__factory__ = ApplicationFactory(object(), object())
     self.__factory__.register(self.__test_actor_path__, type = 'singleton')
     instance_a = self.__factory__.get_instance(self.__test_actor_path__)
     instance_b = self.__factory__.get_instance(self.__test_actor_path__)
@@ -67,6 +67,6 @@ class ApplicationFactoryTests(TestCase):
     self.__factory__.shutdown()
 
   def test_different_types_same_name_fail(self):
-    self.__factory__ = ApplicationFactory(object())
+    self.__factory__ = ApplicationFactory(object(), object())
     self.__factory__.register(self.__test_actor_path__, type = 'singleton')
     self.assertRaises(ValueError, self.__factory__.register, self.__test_actor_path__)

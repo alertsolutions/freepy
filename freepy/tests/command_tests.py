@@ -150,8 +150,10 @@ class LoadModuleCommandTests(TestCase):
      
 class OriginateCommandTests(TestCase):
   def test_success_scenario(self):
-    command = OriginateCommand(object(), url = "http://test.com", extension = None, app_name = 'appTestme', app_args = ['arg1','arg2'], options = ['opt1','opt2'])
-    desired_output = 'bgapi originate {opt1,opt2}http://test.com &appTestme(arg1 arg2)\nJob-UUID: %s\n\n'  % command.__job_uuid__
+    command = OriginateCommand(
+        object(), url = "http://test.com", extension = None,
+        app_name = 'appTestme', app_args = ['arg1','arg2'], options = ['opt1','opt2'])
+    desired_output = 'bgapi originate {opt1,opt2}http://test.com \'&appTestme(arg1 arg2)\'\nJob-UUID: %s\n\n'  % command.__job_uuid__
     self.assertTrue(str(command) == desired_output)
     
 class PauseSessionCreationCommandTests(TestCase):
@@ -480,7 +482,7 @@ class PreProcessCommandTests(TestCase):
 class PreAnswerCommandTests(TestCase):
 	def test_success_scenario(self):
 		command = PreAnswerCommand(object(), '21516b8e-5a0b-485a-9e53-933e42947079')
-		desired_output = 'bgapi uuid_preanswer 21516b8e-5a0b-485a-9e53-933e42947079\nJob-UUID: %s\n\n' % command.__job_uuid__
+		desired_output = 'bgapi uuid_pre_answer 21516b8e-5a0b-485a-9e53-933e42947079\nJob-UUID: %s\n\n' % command.__job_uuid__
 		self.assertTrue(str(command) == desired_output)
 
 class ReceiveDTMFCommandTests(TestCase):
@@ -522,7 +524,7 @@ class SetAudioLevelCommandTests(TestCase):
 class SetMultipleVariableCommandTests(TestCase):
 	def test_success_scenario(self):
 		command = SetMultipleVariableCommand(object(), '21516b8e-5a0b-485a-9e53-933e42947079', variables = dict([('49','55')]))
-		desired_output = 'bgapi uuid_setvar_multi 21516b8e-5a0b-485a-9e53-933e42947079 4=9\nJob-UUID: %s\n\n' % command.__job_uuid__
+		desired_output = 'bgapi uuid_setvar_multi 21516b8e-5a0b-485a-9e53-933e42947079 49=55\nJob-UUID: %s\n\n' % command.__job_uuid__
 		self.assertTrue(str(command) == desired_output)
 
 class SetVariableCommandTests(TestCase):

@@ -21,7 +21,7 @@ from freepy.lib.commands import *
 from freepy.lib.core import *
 from freepy.lib.esl import *
 from freepy.lib.fsm import *
-from freepy.lib.services import *
+from freepy.lib.services import ServiceRequest
 from pykka import ActorRegistry, ThreadingActor
 from twisted.internet import reactor
 from twisted.application import service
