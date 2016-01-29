@@ -127,10 +127,13 @@ class EventSocketClient(Protocol):
       else:
         tokens = line.split(':', 1)
         name = tokens[0].strip()
-        value = tokens[1].strip()
-        if value and not len(value) == 0:
-          value = urllib.unquote(value)
-        headers.update({name: value})
+        if len(tokens) == 2:
+          value = tokens[1].strip()
+          if value and not len(value) == 0:
+            value = urllib.unquote(value)
+          headers.update({name: value})
+        else:
+          headers.update({name: None})
     return headers
 
   def __parse_line__(self, stride = 64):
@@ -151,9 +154,11 @@ class EventSocketClient(Protocol):
     return ''.join(line)
 
   def connectionLost(self, reason):
-    self.__logger__.critical('A connection to the FreeSWITCH instance located @ %s:%i \
-    has been lost due to the following reason.\n%s', self.__peer__.host, 
-    self.__peer__.port, reason)
+    self.__logger__.critical(
+        ('A connection to the FreeSWITCH instance located @ %s:%i '
+        'has been lost due to the following reason.\n%s'),
+        self.__peer__.host, self.__peer__.port, reason)
+    self.__logger__.critical(reason.getTraceback())
     self.__observer__.on_stop()
     if self.__buffer__:
       self.__buffer__.close()
