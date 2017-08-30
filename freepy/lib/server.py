@@ -334,7 +334,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
     if recipient:
       del self.__transactions__[uuid]
       if recipient.is_alive():
-        recipient.tell({'content': message})
+        recipient.tell({'content': message}, True)
 
   def __dispatch_service_request__(self, message):
     name = message.__class__.__name__
