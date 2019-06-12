@@ -18,15 +18,9 @@
 # Thomas Quintana <quintana.thomas@gmail.com>
 from os import SEEK_END
 from twisted.internet.protocol import Protocol, ClientFactory
-
-# Import the proper StringIO implementation.
-try:
-    from cStringIO import StringIO
-except:
-    from StringIO import StringIO
-
+import io
 import logging
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 
 class IEventSocketClientObserver(object):
@@ -72,7 +66,7 @@ class EventSocketClient(Protocol):
 
     def __parse__(self):
         # Make sure we have enough data to process the event.
-        buffer_contents = self.__buffer__.getvalue()
+        buffer_contents = self.__buffer__.getvalue().decode('ascii')
         if len(buffer_contents) == 0 or not buffer_contents.find('\n\n'):
             return None
 
@@ -133,7 +127,7 @@ class EventSocketClient(Protocol):
                 if len(tokens) == 2:
                     value = tokens[1].strip()
                     if value and not len(value) == 0:
-                        value = urllib.unquote(value)
+                        value = urllib.parse.unquote(value)
                     headers.update({name: value})
                 else:
                     headers.update({name: None})
@@ -142,7 +136,7 @@ class EventSocketClient(Protocol):
     def __parse_line__(self, stride=64):
         line = list()
         while True:
-            chunk = self.__buffer__.read(stride)
+            chunk = self.__buffer__.read(stride).decode('ascii')
             end = chunk.find('\n')
             if end == -1:
                 line.append(chunk)
@@ -170,7 +164,7 @@ class EventSocketClient(Protocol):
         self.__peer__ = None
 
     def connectionMade(self):
-        self.__buffer__ = StringIO()
+        self.__buffer__ = io.BytesIO()
         self.__host__ = self.transport.getHost()
         self.__peer__ = self.transport.getPeer()
         self.__observer__.on_start(self)
@@ -194,7 +188,7 @@ class EventSocketClient(Protocol):
             self.__logger__.debug(
                 'The following message will be sent to %s:%i.\n%s',
                 self.__peer__.host, self.__peer__.port, serialized_command)
-        self.transport.write(serialized_command)
+        self.transport.write(serialized_command.encode('utf-8'))
 
 
 # class EventSocketClientFactory(ReconnectingClientFactory):

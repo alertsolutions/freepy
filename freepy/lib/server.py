@@ -122,7 +122,7 @@ class ApplicationFactory(object):
     self.__uninit_event__ = UninitializeSwitchletEvent()
 
   def __contains_name__(self, name):
-    return self.__classes__.has_key(name) or self.__singletons__.has_key(name)
+    return name in self.__classes__ or name in self.__singletons__
 
   def __get_klass__(self, name):
     module = sys.modules.get(name)
@@ -130,7 +130,7 @@ class ApplicationFactory(object):
       separator = name.rfind('.')
       path = name[:separator]
       klass = name[separator + 1:]
-      module = __import__(path, globals(), locals(), [klass], -1)
+      module = __import__(path, globals(), locals(), [klass], 0)
       return getattr(module, klass)
 
   def get_instance(self, name):
@@ -170,7 +170,7 @@ class ApplicationFactory(object):
 
   def shutdown(self):
     # Cleanup the singletons being managed.
-    names = self.__singletons__.keys()
+    names = list(self.__singletons__.keys())
     for name in names:
       self.unregister(name) 
 
@@ -244,7 +244,7 @@ class Dispatcher(FiniteStateMachine, ThreadingActor):
           self.__observers__.update({uuid: observer})
       elif isinstance(message, UnregisterJobObserverCommand):
         uuid = message.get_job_uuid()
-        if self.__observers__.has_key(uuid):
+        if uuid in self.__observers__:
           del self.__observers__[uuid]
       else:
         headers = message.get_headers()

@@ -20,17 +20,13 @@
 # Cristian Groza <frontc18@gmail.com>
 
 from uuid import uuid4
+from io import StringIO
 
-# Import the proper StringIO implementation.
-try:
-  from cStringIO import StringIO
-except:
-  from StringIO import StringIO
 
 class BackgroundCommand(object):
   def __init__(self, *args, **kwargs):
     self.__sender__ = args[0]
-    self.__job_uuid__ = uuid4().get_urn().split(':', 2)[2]
+    self.__job_uuid__ = str(uuid4())
     if not self.__sender__:
       raise ValueError('The sender parameter must be a valid reference to a Pykka actor.')
 
@@ -1334,7 +1330,7 @@ class SetMultipleVariableCommand(UUIDCommand):
     if not isinstance(self.__variables__, dict):
       raise TypeError('The variables parameter must be of type dict.')
     variable_list = list()
-    for key, value in self.__variables__.iteritems():
+    for key, value in self.__variables__.items():
       variable_list.append('%s=%s' % (key, value))
     self.__variables_string__ = ';'.join(variable_list)
 
