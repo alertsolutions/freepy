@@ -66,7 +66,7 @@ class EventSocketClient(Protocol):
 
     def __parse__(self):
         # Make sure we have enough data to process the event.
-        buffer_contents = self.__buffer__.getvalue().decode('ascii')
+        buffer_contents = self.__buffer__.getvalue().decode('utf-8')
         if len(buffer_contents) == 0 or not buffer_contents.find('\n\n'):
             return None
 
@@ -113,7 +113,7 @@ class EventSocketClient(Protocol):
             self.__buffer__.seek(0)
             self.__buffer__.write(data)
             self.__buffer__.truncate(remaining)
-        return Event(headers, body)
+        return Event(headers, body.decode('utf-8') if body else None)
 
     def __parse_headers__(self):
         headers = dict()
